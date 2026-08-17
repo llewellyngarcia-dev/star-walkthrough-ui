@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   TileSelect, MultiSelect, NumInput, YesNo, NoteInput,
   ScoreSelect, SectionCard, ConditionSelect, NextButton, TextInput,
@@ -270,7 +270,7 @@ export type PhotoUploadFn = (file: File, context: { structureId: string; roomKey
 export type PhotoAnalyzeFn = (path: string, label: string) => Promise<string>
 
 export function DwellingDetailForm({
-  structureId, role, defaultLabel, propertyType, existingStructure, saving, onSave, saveLabel = 'Next', onQueueMarketingPhoto, onUploadPhoto, onAnalyzePhoto,
+  structureId, role, defaultLabel, propertyType, existingStructure, saving, onSave, saveLabel = 'Next', onQueueMarketingPhoto, onUploadPhoto, onAnalyzePhoto, onAutosave,
 }: {
   structureId: string
   role: StructureRole
@@ -291,6 +291,11 @@ export function DwellingDetailForm({
   /** Every room photo also queues here for later marketing enhance + Drive
    *  save — one capture, both purposes. */
   onQueueMarketingPhoto: (photo: { path: string; url: string; takenAt: string }) => void
+  /** Fires a debounced silent save (no stage-advance) whenever a photo is
+   *  added or an AI finding accepted — since stage navigation is unlocked,
+   *  an agent can jump to a different tab any time, and photos/findings must
+   *  not depend on ever reaching the Next/Save button to survive that. */
+  onAutosave?: (structure: Structure) => void
 }) {
   const existing = structureToDwellingData(existingStructure)
 
@@ -465,6 +470,26 @@ export function DwellingDetailForm({
       defect_notes:       defectNotes,
     }
   }
+
+  // Debounced autosave — fires whenever photos or room data change, so work
+  // survives a jump to a different stage tab without ever pressing Next.
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const skipFirstAutosave = useRef(true)
+  useEffect(() => {
+    if (!onAutosave) return
+    if (skipFirstAutosave.current) { skipFirstAutosave.current = false; return }
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    autosaveTimer.current = setTimeout(() => {
+      const base: Structure = existingStructure ?? {
+        id: structureId, role, label: defaultLabel,
+        conditionScore: null, modernityScore: null,
+      }
+      const structure = applyDwellingDataToStructure(base, buildPayload())
+      onAutosave({ ...structure, photos: photos.length ? photos : undefined })
+    }, 600)
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photos, bedrooms, bathrooms, lounges, kitchen, defectNotes])
 
   async function handleSave() {
     const base: Structure = existingStructure ?? {
