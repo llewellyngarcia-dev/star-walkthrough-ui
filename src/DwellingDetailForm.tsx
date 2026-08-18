@@ -8,6 +8,36 @@ import {
 import type { DwellingData, BedroomData, BathroomData, LoungeData, KitchenData, RoomPhoto } from './room-types'
 import type { Structure, StructureRole, PhotoRef } from './walkthrough-types'
 
+// ── Photo lightbox ────────────────────────────────────────────────────────────
+// Full-screen enlarge for any walkthrough photo — tap a thumbnail, see it
+// properly instead of squinting at a 56px square. Click outside or Esc closes.
+
+function PhotoLightbox({ url, onClose }: { url: string; onClose: () => void }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close"
+        className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
+      >
+        ✕
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt="" className="max-w-full max-h-full object-contain rounded-lg" />
+    </div>
+  )
+}
+
 // ── Room-level photo capture ─────────────────────────────────────────────────
 // Compact photo strip embedded directly in each room card (bedroom, bathroom,
 // lounge, kitchen) so a photo is captured right alongside that room's own
@@ -15,7 +45,7 @@ import type { Structure, StructureRole, PhotoRef } from './walkthrough-types'
 // to THAT room's notes, not lumped into the whole structure's defect list.
 
 function RoomPhotoStrip({
-  structureId, roomKey, photos, onChange, onFindingAccepted, onQueueMarketingPhoto, onUploadPhoto, onAnalyzePhoto,
+  structureId, roomKey, photos, onChange, onFindingAccepted, onQueueMarketingPhoto, onUploadPhoto, onAnalyzePhoto, onPhotoClick,
 }: {
   structureId: string
   roomKey: string
@@ -29,6 +59,7 @@ function RoomPhotoStrip({
   onQueueMarketingPhoto: (photo: { path: string; url: string; takenAt: string }) => void
   onUploadPhoto: PhotoUploadFn
   onAnalyzePhoto: PhotoAnalyzeFn
+  onPhotoClick: (url: string) => void
 }) {
   const [uploading, setUploading] = useState(false)
   const [analyzingIdx, setAnalyzingIdx] = useState<number | null>(null)
@@ -81,7 +112,10 @@ function RoomPhotoStrip({
       <div className="flex items-center gap-2 flex-wrap">
         {photos.map((p, i) => (
           <div key={p.path} className="relative">
-            <img src={p.url} alt="" className="w-14 h-14 object-cover rounded-lg border border-gray-200" />
+            <button type="button" onClick={() => onPhotoClick(p.url)} className="block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.url} alt="" className="w-14 h-14 object-cover rounded-lg border border-gray-200" />
+            </button>
             <button type="button" onClick={() => remove(i)}
               className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-50 text-red-400 text-[10px] flex items-center justify-center hover:bg-red-100">×</button>
             {!p.aiFinding && (
@@ -302,6 +336,10 @@ export function DwellingDetailForm({
   onAutosave?: (structure: Structure) => void
 }) {
   const existing = structureToDwellingData(existingStructure)
+
+  // Click-to-enlarge — shared by RoomPhotoStrip thumbnails and the
+  // structure-level "Other Photos" grid below.
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   // Layer 5: Condition & Modernity
   const [condScore, setCondScore] = useState<number | null>(existing?.condition_score ?? null)
@@ -603,6 +641,7 @@ export function DwellingDetailForm({
                   onQueueMarketingPhoto={onQueueMarketingPhoto}
                   onUploadPhoto={onUploadPhoto}
                   onAnalyzePhoto={onAnalyzePhoto}
+                  onPhotoClick={setLightboxUrl}
                 />
               </div>
             ))}
@@ -679,6 +718,7 @@ export function DwellingDetailForm({
                     onQueueMarketingPhoto={onQueueMarketingPhoto}
                   onUploadPhoto={onUploadPhoto}
                   onAnalyzePhoto={onAnalyzePhoto}
+                  onPhotoClick={setLightboxUrl}
                   />
                 </div>
               )
@@ -740,6 +780,7 @@ export function DwellingDetailForm({
                   onQueueMarketingPhoto={onQueueMarketingPhoto}
                   onUploadPhoto={onUploadPhoto}
                   onAnalyzePhoto={onAnalyzePhoto}
+                  onPhotoClick={setLightboxUrl}
                 />
               </div>
             ))}
@@ -770,6 +811,7 @@ export function DwellingDetailForm({
           onQueueMarketingPhoto={onQueueMarketingPhoto}
                   onUploadPhoto={onUploadPhoto}
                   onAnalyzePhoto={onAnalyzePhoto}
+                  onPhotoClick={setLightboxUrl}
         />
       </SectionCard>
 
@@ -805,7 +847,10 @@ export function DwellingDetailForm({
         <div className="grid grid-cols-3 gap-2">
           {photos.map((p, i) => (
             <div key={p.path} className="relative">
-              <img src={p.url} alt="" className="w-full aspect-square object-cover rounded-lg border border-gray-200" />
+              <button type="button" onClick={() => setLightboxUrl(p.url)} className="block w-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.url} alt="" className="w-full aspect-square object-cover rounded-lg border border-gray-200" />
+              </button>
               <button
                 type="button"
                 onClick={() => removePhoto(i)}
@@ -873,6 +918,10 @@ export function DwellingDetailForm({
       </SectionCard>
 
       <NextButton onPress={handleSave} saving={saving} label={saveLabel} />
+
+      {lightboxUrl && (
+        <PhotoLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
+      )}
     </div>
   )
 }
