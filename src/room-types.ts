@@ -5,6 +5,7 @@
 
 export type ConditionRating = 'good' | 'fair' | 'needs_work' | null
 export type Score1to5 = 1 | 2 | 3 | 4 | 5
+export type WindowFrameType = 'wooden' | 'steel' | 'aluminium' | 'pvc' | null
 
 export interface RoomPhoto {
   path:      string
@@ -19,6 +20,7 @@ export interface BedroomData {
   features: string[]
   flooring: string
   window_type: string
+  window_frame_type: WindowFrameType
   notes: string
   photos?: RoomPhoto[]
 }
@@ -31,6 +33,7 @@ export interface BathroomData {
   double_vanity: boolean
   heated_towel_rail: boolean
   condition: ConditionRating
+  window_frame_type: WindowFrameType
   notes: string
   photos?: RoomPhoto[]
 }
@@ -43,6 +46,7 @@ export interface LoungeData {
   has_fireplace: boolean
   has_ceiling_fan: boolean
   condition: ConditionRating
+  window_frame_type: WindowFrameType
   notes: string
   photos?: RoomPhoto[]
 }
@@ -55,6 +59,7 @@ export interface KitchenData {
   stove_included: boolean | null
   has_scullery: boolean
   has_island: boolean
+  window_frame_type: WindowFrameType
   notes: string
   photos?: RoomPhoto[]
 }

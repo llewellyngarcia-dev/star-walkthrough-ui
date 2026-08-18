@@ -5,7 +5,7 @@
  * All components are touch-first (44px min targets) and follow the Harcourts brand.
  */
 
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 
 // ── TileSelect ────────────────────────────────────────────────────────────────
 // Single-select grid of labelled option buttons.
@@ -203,6 +203,83 @@ export function TextInput({
 }
 
 // ── NoteInput ─────────────────────────────────────────────────────────────────
+// Includes a mic button (Web Speech API) so notes can be dictated instead of
+// typed — useful mid-walkthrough with hands full of a phone/tape measure.
+// Silently omits the button on browsers with no SpeechRecognition support
+// (e.g. desktop Firefox) rather than showing a broken control.
+
+interface SpeechRecognitionLike {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onresult: ((event: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null
+  onerror: (() => void) | null
+  onend: (() => void) | null
+  start: () => void
+  stop: () => void
+}
+
+function getSpeechRecognition(): (new () => SpeechRecognitionLike) | null {
+  if (typeof window === 'undefined') return null
+  const w = window as unknown as Record<string, unknown>
+  return (w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null) as (new () => SpeechRecognitionLike) | null
+}
+
+function MicButton({ onTranscript }: { onTranscript: (text: string) => void }) {
+  const [supported, setSupported] = useState(false)
+  const [listening, setListening] = useState(false)
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+
+  useEffect(() => {
+    setSupported(!!getSpeechRecognition())
+  }, [])
+
+  function toggle() {
+    if (listening) {
+      recognitionRef.current?.stop()
+      return
+    }
+    const SpeechRecognitionCtor = getSpeechRecognition()
+    if (!SpeechRecognitionCtor) return
+
+    const recognition = new SpeechRecognitionCtor()
+    recognition.continuous = true
+    recognition.interimResults = false
+    recognition.lang = 'en-ZA'
+    recognition.onresult = event => {
+      let transcript = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i]
+        if (result.isFinal) transcript += result[0].transcript
+      }
+      if (transcript.trim()) onTranscript(transcript.trim())
+    }
+    recognition.onerror = () => setListening(false)
+    recognition.onend = () => setListening(false)
+
+    recognitionRef.current = recognition
+    recognition.start()
+    setListening(true)
+  }
+
+  if (!supported) return null
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={listening ? 'Stop dictating' : 'Dictate note'}
+      className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+        listening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+      }`}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M19 11a7 7 0 0 1-14 0M12 19v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  )
+}
 
 export function NoteInput({
   label,
@@ -220,13 +297,16 @@ export function NoteInput({
   return (
     <div className="space-y-1">
       {label && <p className="text-xs font-medium text-gray-500">{label}</p>}
-      <textarea
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder ?? 'Notes…'}
-        rows={rows}
-        className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-harcourts-navy"
-      />
+      <div className="flex items-start gap-2">
+        <textarea
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder ?? 'Notes…'}
+          rows={rows}
+          className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-harcourts-navy"
+        />
+        <MicButton onTranscript={text => onChange(value ? `${value} ${text}` : text)} />
+      </div>
     </div>
   )
 }

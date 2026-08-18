@@ -127,7 +127,7 @@ function RoomPhotoStrip({
 
 function newBedroom(n: number): BedroomData {
   const label = n === 1 ? 'Main Bedroom' : `Bedroom ${n}`
-  return { label, en_suite_ref: null, features: [], flooring: '', window_type: '', notes: '' }
+  return { label, en_suite_ref: null, features: [], flooring: '', window_type: '', window_frame_type: null, notes: '' }
 }
 
 function newBathroom(n: number): BathroomData {
@@ -139,6 +139,7 @@ function newBathroom(n: number): BathroomData {
     double_vanity: false,
     heated_towel_rail: false,
     condition: null,
+    window_frame_type: null,
     notes: '',
   }
 }
@@ -152,6 +153,7 @@ function newLounge(n: number): LoungeData {
     has_fireplace: false,
     has_ceiling_fan: false,
     condition: null,
+    window_frame_type: null,
     notes: '',
   }
 }
@@ -165,6 +167,7 @@ function defaultKitchen(): KitchenData {
     stove_included: null,
     has_scullery: false,
     has_island: false,
+    window_frame_type: null,
     notes: '',
   }
 }
@@ -251,6 +254,7 @@ export function applyDwellingDataToStructure(base: Structure, d: DwellingData): 
 
 const WALL_TYPES   = [{ value: 'plaster', label: 'Plaster' }, { value: 'face_brick', label: 'Face Brick' }, { value: 'combination', label: 'Combination' }, { value: 'timber', label: 'Timber' }, { value: 'other', label: 'Other' }]
 const ROOF_TYPES   = [{ value: 'clay_tiles', label: 'Clay Tiles' }, { value: 'concrete_tiles', label: 'Concrete Tiles' }, { value: 'ibr', label: 'IBR Sheet' }, { value: 'corrugated', label: 'Corrugated' }, { value: 'thatch', label: 'Thatch' }, { value: 'flat', label: 'Flat/Waterproof' }]
+const WINDOW_FRAME_TYPES = [{ value: 'wooden', label: 'Wooden' }, { value: 'steel', label: 'Steel' }, { value: 'aluminium', label: 'Aluminum' }, { value: 'pvc', label: 'PVC' }]
 const FLOORING_OPTS = [{ value: 'tiles', label: 'Tiles' }, { value: 'timber', label: 'Timber' }, { value: 'carpet', label: 'Carpet' }, { value: 'vinyl', label: 'Vinyl' }, { value: 'polished_concrete', label: 'Polished Concrete' }, { value: 'mixed', label: 'Mixed' }]
 const BEDROOM_FEATURES = [{ value: 'BIC', label: 'BIC' }, { value: 'Aircon', label: 'Aircon' }, { value: 'Ceiling Fan', label: 'Ceiling Fan' }, { value: 'Balcony', label: 'Balcony' }, { value: 'Study Nook', label: 'Study Nook' }]
 const LOUNGE_SIZES = [{ value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }, { value: 'xl', label: 'XL' }]
@@ -579,6 +583,14 @@ export function DwellingDetailForm({
                   columns={4}
                 />
 
+                <TileSelect
+                  label="Window frames"
+                  options={WINDOW_FRAME_TYPES}
+                  value={bed.window_frame_type}
+                  onChange={v => setBedrooms(prev => prev.map((b, j) => j === i ? { ...b, window_frame_type: v as BedroomData['window_frame_type'] } : b))}
+                  columns={4}
+                />
+
                 <NoteInput
                   value={bed.notes}
                   onChange={notes => setBedrooms(prev => prev.map((b, j) => j === i ? { ...b, notes } : b))}
@@ -648,6 +660,13 @@ export function DwellingDetailForm({
                     value={bth.condition}
                     onChange={condition => setBathrooms(prev => prev.map((b, j) => j === i ? { ...b, condition } : b))}
                   />
+                  <TileSelect
+                    label="Window frames"
+                    options={WINDOW_FRAME_TYPES}
+                    value={bth.window_frame_type}
+                    onChange={v => setBathrooms(prev => prev.map((b, j) => j === i ? { ...b, window_frame_type: v as BathroomData['window_frame_type'] } : b))}
+                    columns={4}
+                  />
                   <NoteInput
                     value={bth.notes}
                     onChange={notes => setBathrooms(prev => prev.map((b, j) => j === i ? { ...b, notes } : b))}
@@ -702,6 +721,13 @@ export function DwellingDetailForm({
                   value={lng.condition}
                   onChange={condition => setLounges(prev => prev.map((l, j) => j === i ? { ...l, condition } : l))}
                 />
+                <TileSelect
+                  label="Window frames"
+                  options={WINDOW_FRAME_TYPES}
+                  value={lng.window_frame_type}
+                  onChange={v => setLounges(prev => prev.map((l, j) => j === i ? { ...l, window_frame_type: v as LoungeData['window_frame_type'] } : l))}
+                  columns={4}
+                />
                 <NoteInput
                   value={lng.notes}
                   onChange={notes => setLounges(prev => prev.map((l, j) => j === i ? { ...l, notes } : l))}
@@ -734,6 +760,7 @@ export function DwellingDetailForm({
         )}
         <YesNo label="Has scullery"      value={kitchen.has_scullery} onChange={v => setKitchen(k => ({ ...k, has_scullery: v }))} />
         <YesNo label="Has kitchen island" value={kitchen.has_island}  onChange={v => setKitchen(k => ({ ...k, has_island: v }))} />
+        <TileSelect label="Window frames" options={WINDOW_FRAME_TYPES} value={kitchen.window_frame_type} onChange={v => setKitchen(k => ({ ...k, window_frame_type: v as KitchenData['window_frame_type'] }))} columns={4} />
         <NoteInput value={kitchen.notes} onChange={v => setKitchen(k => ({ ...k, notes: v }))} />
         <RoomPhotoStrip
           structureId={structureId} roomKey="kitchen"
