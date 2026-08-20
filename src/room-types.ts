@@ -6,6 +6,7 @@
 export type ConditionRating = 'good' | 'fair' | 'needs_work' | null
 export type Score1to5 = 1 | 2 | 3 | 4 | 5
 export type WindowFrameType = 'wooden' | 'steel' | 'aluminium' | 'pvc' | null
+export type ViewType = 'none' | 'inland' | 'partial_sea' | 'full_sea' | 'river' | 'golf' | 'other'
 
 export interface RoomPhoto {
   path:      string
@@ -97,6 +98,12 @@ export interface DwellingData {
   has_patio: boolean
   has_balcony: boolean
   outdoor_features: string[]
+
+  // Multi-select — a dwelling can face more than one view (e.g. partial sea
+  // AND a river). Captured per-dwelling since a flatlet/cottage can face a
+  // different direction than the main house.
+  views: ViewType[]
+  view_notes: string
   driveway_type: 'paved' | 'cobble' | 'gravel' | 'concrete' | 'grass' | null
   gate_type: 'none' | 'manual' | 'automated' | null
   garden_slope: 'flat' | 'gently_sloping' | 'steep' | null

@@ -19,7 +19,7 @@
 
 import type {
   BedroomData, BathroomData, LoungeData, KitchenData,
-  PoolData, UtilitiesData, ProximityData, Score1to5,
+  PoolData, UtilitiesData, ProximityData, Score1to5, ViewType,
 } from './room-types'
 
 export interface PhotoRef {
@@ -81,6 +81,12 @@ export interface Structure {
   hasPatio?:             boolean
   hasBalcony?:           boolean
   outdoorFeatures?:      string[]
+
+  // Multi-select — only meaningful for livable roles (LIVABLE_ROLES). A
+  // flatlet/cottage can face a different direction than the main house, so
+  // this is captured per-structure rather than once for the whole property.
+  views?:                ViewType[]
+  viewNotes?:            string
   drivewayType?:         'paved' | 'cobble' | 'gravel' | 'concrete' | 'grass' | null
   gateType?:             'none' | 'manual' | 'automated' | null
   gardenSlope?:          'flat' | 'gently_sloping' | 'steep' | null
@@ -158,4 +164,21 @@ export function emptyWalkthrough(): WalkthroughV2 {
 export function findMainDwelling(w: WalkthroughV2 | null | undefined): Structure | null {
   if (!w) return null
   return w.structures.find(s => s.role === 'main_dwelling') ?? null
+}
+
+// Pricing (computeFinalValuation) still takes one viewType string — a sea
+// view premium doesn't stack per-structure. This picks the single best view
+// across all livable structures, most valuable first, so siteFeatures.viewType
+// can stay in sync automatically instead of needing separate manual entry
+// now that views are captured per-structure.
+const VIEW_RANK: ViewType[] = ['full_sea', 'partial_sea', 'river', 'golf', 'inland', 'other', 'none']
+
+export function deriveBestView(structures: Structure[]): string {
+  const all = structures
+    .filter(s => LIVABLE_ROLES.includes(s.role))
+    .flatMap(s => s.views ?? [])
+  for (const rank of VIEW_RANK) {
+    if (all.includes(rank) && rank !== 'none') return rank
+  }
+  return ''
 }

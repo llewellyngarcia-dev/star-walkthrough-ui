@@ -5,7 +5,7 @@ import {
   TileSelect, MultiSelect, NumInput, YesNo, NoteInput,
   ScoreSelect, SectionCard, ConditionSelect, NextButton, TextInput,
 } from './ui'
-import type { DwellingData, BedroomData, BathroomData, LoungeData, KitchenData, RoomPhoto } from './room-types'
+import type { DwellingData, BedroomData, BathroomData, LoungeData, KitchenData, RoomPhoto, ViewType } from './room-types'
 import type { Structure, StructureRole, PhotoRef } from './walkthrough-types'
 
 // ── Photo lightbox ────────────────────────────────────────────────────────────
@@ -255,6 +255,8 @@ export function structureToDwellingData(s: Structure | null | undefined): Dwelli
     outdoor_notes: s.outdoorNotes ?? '',
     defects: s.defects ?? [],
     defect_notes: s.defectNotes ?? '',
+    views: s.views ?? [],
+    view_notes: s.viewNotes ?? '',
   }
 }
 
@@ -281,6 +283,7 @@ export function applyDwellingDataToStructure(base: Structure, d: DwellingData): 
     drivewayType: d.driveway_type, gateType: d.gate_type, gardenSlope: d.garden_slope, gardenCondition: d.garden_condition, boundaryType: d.boundary_type,
     constructionNotes: d.construction_notes, parkingNotes: d.parking_notes, outdoorNotes: d.outdoor_notes,
     defects: d.defects, defectNotes: d.defect_notes,
+    views: d.views, viewNotes: d.view_notes,
   }
 }
 
@@ -301,6 +304,15 @@ const GATE_TYPES = [{ value: 'none', label: 'None' }, { value: 'manual', label: 
 const BOUNDARY_TYPES = [{ value: 'walled', label: 'Walled' }, { value: 'fenced', label: 'Fenced' }, { value: 'open', label: 'Open' }, { value: 'combination', label: 'Combination' }]
 const GARDEN_SLOPES = [{ value: 'flat', label: 'Flat' }, { value: 'gently_sloping', label: 'Gentle Slope' }, { value: 'steep', label: 'Steep' }]
 const OUTDOOR_FEATURES = [{ value: 'braai', label: 'Braai' }, { value: 'lapa', label: 'Lapa' }, { value: 'boma', label: 'Boma' }, { value: 'pergola', label: 'Pergola' }, { value: 'outdoor_kitchen', label: 'Outdoor Kitchen' }, { value: 'courtyard', label: 'Courtyard' }]
+const VIEW_TYPES = [
+  { value: 'none',        label: 'No view' },
+  { value: 'inland',      label: 'Inland / Bush' },
+  { value: 'partial_sea', label: 'Partial Sea' },
+  { value: 'full_sea',    label: 'Full Sea' },
+  { value: 'river',       label: 'River / Dam' },
+  { value: 'golf',        label: 'Golf Course' },
+  { value: 'other',       label: 'Other' },
+]
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -396,6 +408,11 @@ export function DwellingDetailForm({
 
   // Defects
   const [defectNotes, setDefectNotes] = useState(existing?.defect_notes ?? '')
+
+  // Views — multi-select, per-structure (a flatlet can face a different
+  // direction than the main house)
+  const [views,     setViews]     = useState<ViewType[]>(existing?.views ?? [])
+  const [viewNotes, setViewNotes] = useState(existing?.view_notes ?? '')
 
   // Reference photos — informational, never fed into size/price calculations
   const [photos, setPhotos] = useState<PhotoRef[]>(existingStructure?.photos ?? [])
@@ -510,6 +527,8 @@ export function DwellingDetailForm({
       outdoor_notes:      outdoorNotes,
       defects:            [],
       defect_notes:       defectNotes,
+      views,
+      view_notes: viewNotes,
     }
   }
 
@@ -564,6 +583,18 @@ export function DwellingDetailForm({
         <NumInput  label="Storeys" value={storeys} onChange={setStoreys} min={1} max={4} />
         <MultiSelect label="Flooring types" options={FLOORING_OPTS} value={flooringTypes} onChange={setFlooringTypes} columns={3} />
         <NoteInput value={constructionNotes} onChange={setConstructionNotes} placeholder="e.g. Face brick repainted, slight damp on north wall" />
+      </SectionCard>
+
+      {/* Views — applies to any structure/property type (a sectional unit can
+          still have sea views), so kept outside the freehold-only Outdoor
+          section below. */}
+      <SectionCard title={`${defaultLabel} — Views`}>
+        <MultiSelect options={VIEW_TYPES} value={views} onChange={v => setViews(v as ViewType[])} columns={3} />
+        <NoteInput
+          value={viewNotes}
+          onChange={setViewNotes}
+          placeholder="e.g. Full unobstructed ocean views from living areas and main bedroom"
+        />
       </SectionCard>
 
       {/* Room counts */}
